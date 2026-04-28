@@ -97,7 +97,6 @@ def get_prices():
             f"📊 *REPORTE DE PRECIOS*\n\n"
             f"🛢️ *Petróleo:* {oil} {status_oil}\n"
             f"💨 *CO2:* {co2} {status_co2}\n\n"
-            f"⏰ _Actualizado: {time.strftime('%H:%M')} (Río Cuarto)_"
         )
         
         return mensaje
