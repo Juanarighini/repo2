@@ -27,48 +27,53 @@ def get_prices():
     options.binary_location = "/usr/bin/google-chrome"
     
     driver = webdriver.Chrome(options=options)
-    wait = WebDriverWait(driver, 20)
+    wait = WebDriverWait(driver, 25) # Un poco más de tiempo por si el servidor está lento
     
     try:
         # 1. Login
         driver.get("https://energymanagergame.com/weblogin/")
         
-        # CORRECCIÓN 1: presence_of_element_located + tupla (By.ID, "...")
+        # Cargar credenciales
         wait.until(EC.presence_of_element_located((By.ID, "loginMail"))).send_keys(USER_EMAIL)
         driver.find_element(By.ID, "loginPass").send_keys(USER_PASS)
         
-        login_btn = driver.find_element(By.XPATH, "//button[contains(text(), 'Log In')]")
+        # CLICK LOGIN (XPath proporcionado)
+        login_btn = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="signin-form"]/div[5]/div/input')))
         driver.execute_script("arguments[0].click();", login_btn)
         
         # 2. Esperar Dashboard y abrir menú Fuel
-        time.sleep(10) 
+        time.sleep(12) 
         
-        # CORRECCIÓN 2: element_to_be_clickable + tupla (By.XPATH, "...")
-        fuel_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//div[contains(@class, 'consumable-wrapper')]")))
+        # CLICK TRIGGER FUEL (XPath proporcionado)
+        fuel_btn = wait.until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[4]/div/div[3]/div/div[2]/div')))
         driver.execute_script("arguments[0].click();", fuel_btn)
         
-        # 3. Leer CO2
-        time.sleep(3)
-        # CORRECCIÓN 3: presence_of_element_located + tupla (By.XPATH, "...")
-        co2 = wait.until(EC.presence_of_element_located((By.XPATH, "//span[contains(@class, 'text-success') and contains(@class, 'fw-bold')]"))).text
+        # 3. Leer CO2 (Abre por defecto)
+        time.sleep(4)
+        # XPath de CO2 proporcionado para asegurar que la ventana cargó
+        wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="popup-content"]/div[1]/div/div/div/div[4]/button')))
         
-        # 4. Cambiar a Oil
-        oil_tab = driver.find_element(By.ID, "header-power-exchange")
+        # Buscamos el valor numérico (usando el selector de éxito que ya funcionaba)
+        co2 = driver.find_element(By.XPATH, "//span[contains(@class, 'text-success') and contains(@class, 'fw-bold')]").text
+        
+        # 4. Cambiar a OIL
+        # CLICK PESTAÑA OIL (XPath proporcionado)
+        oil_tab = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="header-power-exchange"]')))
         driver.execute_script("arguments[0].click();", oil_tab)
-        time.sleep(2)
+        time.sleep(3)
         
-        # 5. Leer Oil
+        # 5. Leer OIL
         oil = driver.find_element(By.XPATH, "//div[contains(text(), 'Current price')]/following-sibling::span[contains(@class, 'fw-bold')]").text
         
         return f"Precio Petróleo={oil} | Precio CO2={co2}"
 
     except Exception as e:
-        # Esto te ayudará a ver en qué línea exacta falla si vuelve a pasar
         return f"❌ Error: {str(e)}"
     finally:
         driver.quit()
-        
+
 def send_whatsapp(text):
+    if not INSTANCE_ID or not TOKEN: return
     url = f"https://api.ultramsg.com/{INSTANCE_ID}/messages/chat"
     payload = {"token": TOKEN, "to": CHAT_ID, "body": text, "priority": 10}
     requests.post(url, data=urllib.parse.urlencode(payload), headers={'content-type': 'application/x-www-form-urlencoded'})
@@ -79,11 +84,9 @@ def run_bot_task():
 
 @app.route('/')
 def webhook():
-    # Iniciamos el bot en un hilo separado para no bloquear la respuesta a Cron-job
     threading.Thread(target=run_bot_task).start()
-    return "Ejecutando bot...", 200
+    return "Ejecutando bot con XPaths verificados...", 200
 
 if __name__ == "__main__":
-    # Render asigna un puerto dinámico
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
