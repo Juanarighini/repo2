@@ -55,13 +55,22 @@ def get_prices():
         wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="popup-content"]/div[1]/div/div/div/div[4]/button')))
         co2 = driver.find_element(By.XPATH, "//span[contains(@class, 'text-success') and contains(@class, 'fw-bold')]").text
         
-        # Cambiar a OIL
+        # 4. Cambiar a OIL
         oil_tab = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="header-power-exchange"]')))
         driver.execute_script("arguments[0].click();", oil_tab)
-        time.sleep(3)
         
-        # Leer OIL
-        oil = driver.find_element(By.XPATH, "//div[contains(text(), 'Current price')]/following-sibling::span[contains(@class, 'fw-bold')]").text
+        # 5. ESPERAR Y LEER OIL
+        # En lugar de solo un sleep, esperamos hasta que el elemento del precio aparezca
+        # Usamos un selector basado en la clase fw-bold que es común en el juego
+        time.sleep(5) # Damos tiempo extra para que el JS del juego actualice el valor
+        
+        try:
+            # Intentamos capturar el valor del precio que aparece después de "Current price"
+            oil_element = wait.until(EC.presence_of_element_located((By.XPATH, "//span[contains(@class, 'fw-bold') and contains(text(), '$')]")))
+            oil = oil_element.text
+        except:
+            # Si el anterior falla, buscamos el span que está dentro del contenedor de Oil
+            oil = driver.find_element(By.XPATH, "//*[@id='header-power-exchange']/following::span[contains(@class, 'fw-bold')][1]").text
         
         return f"Precio Petróleo={oil} | Precio CO2={co2}"
 
