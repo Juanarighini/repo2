@@ -1,3 +1,4 @@
+import os
 import time
 import requests
 import urllib.parse
@@ -7,13 +8,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-# --- CONFIGURACIÓN ---
-INSTANCE_ID = "instance172179"
-TOKEN = "wyedawcvk4ebpjqo"
-CHAT_ID = "120363425322589609@g.us"
+# --- CONFIGURACIÓN PROTEGIDA (Leída desde Render) ---
+INSTANCE_ID = os.getenv('INSTANCE_ID')
+TOKEN = os.getenv('ULTRAMSG_TOKEN')
+CHAT_ID = os.getenv('CHAT_ID')
 
-USER_EMAIL = "TU_EMAIL"
-USER_PASS = "TU_PASS"
+# --- CREDENCIALES DEL JUEGO PROTEGIDAS ---
+USER_EMAIL = os.getenv('USER_EMAIL')
+USER_PASS = os.getenv('USER_PASS')
 
 def get_prices():
     options = Options()
@@ -49,10 +51,10 @@ def get_prices():
         driver.execute_script("arguments[0].click();", oil_tab)
         time.sleep(2)
         
-        # 5. Leer Oil
         oil = driver.find_element(By.XPATH, "//div[contains(text(), 'Current price')]/following-sibling::span[contains(@class, 'fw-bold')]").text
         
-        return f"⚡ *ENERGY MANAGER REPORT* ⚡\n\n🌱 *CO2:* {co2} per 1000\n🛢️ *Oil:* {oil}"
+        # Formatear el mensaje según tu pedido:
+        return f"Precio Petróleo={oil} | Precio CO2={co2}"
 
     except Exception as e:
         return f"❌ Error: {str(e)}"
@@ -60,9 +62,21 @@ def get_prices():
         driver.quit()
 
 def send_whatsapp(text):
+    # Verificamos que las variables existan para evitar errores
+    if not INSTANCE_ID or not TOKEN:
+        print("Error: Credenciales de WhatsApp no configuradas.")
+        return
+
     url = f"https://api.ultramsg.com/{INSTANCE_ID}/messages/chat"
-    payload = {"token": TOKEN, "to": CHAT_ID, "body": text, "priority": 10}
-    requests.post(url, data=urllib.parse.urlencode(payload), headers={'content-type': 'application/x-www-form-urlencoded'})
+    payload = {
+        "token": TOKEN,
+        "to": CHAT_ID,
+        "body": text,
+        "priority": 10
+    }
+    headers = {'content-type': 'application/x-www-form-urlencoded'}
+    data = urllib.parse.urlencode(payload)
+    requests.post(url, data=data, headers=headers)
 
 if __name__ == "__main__":
     resultado = get_prices()
