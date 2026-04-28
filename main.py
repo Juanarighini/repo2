@@ -29,30 +29,37 @@ def get_prices():
     driver = webdriver.Chrome(options=options)
     wait = WebDriverWait(driver, 20)
     
-    try:
+try:
+        # 1. Login
         driver.get("https://energymanagergame.com/weblogin/")
-        wait.until(EC.presence_of_element_by_id("loginMail")).send_keys(USER_EMAIL)
+        
+        # CORRECCIÓN AQUÍ: Usamos (By.ID, "...") dentro de la condición
+        wait.until(EC.presence_of_element_located((By.ID, "loginMail"))).send_keys(USER_EMAIL)
         driver.find_element(By.ID, "loginPass").send_keys(USER_PASS)
+        
         login_btn = driver.find_element(By.XPATH, "//button[contains(text(), 'Log In')]")
         driver.execute_script("arguments[0].click();", login_btn)
         
+        # 2. Esperar Dashboard y abrir menú Fuel
         time.sleep(10) 
         
+        # CORRECCIÓN AQUÍ TAMBIÉN: presence_of_element_located con tupla
         fuel_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//div[contains(@class, 'consumable-wrapper')]")))
         driver.execute_script("arguments[0].click();", fuel_btn)
         
+        # 3. Leer CO2
         time.sleep(3)
-        co2 = wait.until(EC.presence_of_element_by_xpath("//span[contains(@class, 'text-success') and contains(@class, 'fw-bold')]")).text
+        co2 = wait.until(EC.presence_of_element_located((By.XPATH, "//span[contains(@class, 'text-success') and contains(@class, 'fw-bold')]"))).text
         
+        # 4. Cambiar a Oil
         oil_tab = driver.find_element(By.ID, "header-power-exchange")
         driver.execute_script("arguments[0].click();", oil_tab)
         time.sleep(2)
         
+        # 5. Leer Oil
         oil = driver.find_element(By.XPATH, "//div[contains(text(), 'Current price')]/following-sibling::span[contains(@class, 'fw-bold')]").text
         
-        # Formato exacto que pediste
         return f"Precio Petróleo={oil} | Precio CO2={co2}"
-
     except Exception as e:
         return f"❌ Error: {str(e)}"
     finally:
