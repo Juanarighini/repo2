@@ -24,6 +24,25 @@ CHAT_ID = os.getenv('CHAT_ID')
 USER_EMAIL = os.getenv('USER_EMAIL')
 USER_PASS = os.getenv('USER_PASS')
 
+def obtener_emoji(valor_str, tipo):
+    try:
+        # Limpiamos el string para quedarnos solo con el número
+        # Ejemplo: "$3.10" -> 3.10
+        valor = float(valor_str.replace('$', '').replace(',', '').strip())
+        
+        if tipo == 'oil':
+            if valor <= 2.5: return "🟢 (MUY BARATO)"
+            if valor <= 4.5: return "🟡 (NORMAL)"
+            return "🔴 (CARO)"
+            
+        if tipo == 'co2':
+            if valor <= 30: return "🟢 (MUY BARATO)"
+            if valor <= 80: return "🟡 (NORMAL)"
+            return "🔴 (CARO)"
+    except:
+        return "❓"
+    return "❓"
+    
 def get_prices():
     options = Options()
     options.add_argument("--headless")
@@ -60,19 +79,28 @@ def get_prices():
         driver.execute_script("arguments[0].click();", oil_tab)
         
         # 5. ESPERAR Y LEER OIL
-        # En lugar de solo un sleep, esperamos hasta que el elemento del precio aparezca
-        # Usamos un selector basado en la clase fw-bold que es común en el juego
-        time.sleep(5) # Damos tiempo extra para que el JS del juego actualice el valor
+        time.sleep(5) 
         
         try:
-            # Intentamos capturar el valor del precio que aparece después de "Current price"
+            # Intentamos capturar el valor con el símbolo $
             oil_element = wait.until(EC.presence_of_element_located((By.XPATH, "//span[contains(@class, 'fw-bold') and contains(text(), '$')]")))
             oil = oil_element.text
         except:
-            # Si el anterior falla, buscamos el span que está dentro del contenedor de Oil
+            # Si falla, buscamos el primer span negrita después de la pestaña de Oil
             oil = driver.find_element(By.XPATH, "//*[@id='header-power-exchange']/following::span[contains(@class, 'fw-bold')][1]").text
         
-        return f"Precio Petróleo={oil} | Precio CO2={co2}"
+        # --- Cálculo de Estados y Mensaje ---
+        status_oil = obtener_emoji(oil, 'oil')
+        status_co2 = obtener_emoji(co2, 'co2')
+        
+        mensaje = (
+            f"📊 *REPORTE DE PRECIOS*\n\n"
+            f"🛢️ *Petróleo:* {oil} {status_oil}\n"
+            f"💨 *CO2:* {co2} {status_co2}\n\n"
+            f"⏰ _Actualizado: {time.strftime('%H:%M')} (Río Cuarto)_"
+        )
+        
+        return mensaje
 
     except Exception as e:
         return f"❌ Error: {str(e)}"
